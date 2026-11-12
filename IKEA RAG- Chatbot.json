@@ -1,0 +1,190 @@
+{
+  "name": "IKEA RAG- Chatbot",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -128,
+        -32
+      ],
+      "id": "8da2da43-c33d-4be0-aada-7e1a174f5ca1",
+      "name": "When chat message received",
+      "webhookId": "71008d7f-9526-4f14-b878-8f9c5a7d6186"
+    },
+    {
+      "parameters": {
+        "mode": "load",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "ikea-knowledge",
+          "mode": "list",
+          "cachedResultName": "ikea-knowledge"
+        },
+        "prompt": "={{ $json.chatInput }}",
+        "topK": 10,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        96,
+        -32
+      ],
+      "id": "9b49ed94-f1c5-4a52-9826-161ac919b45d",
+      "name": "Qdrant Vector Store1",
+      "credentials": {
+        "qdrantApi": {
+          "id": "rzg1CoKs5e139F5w",
+          "name": "Qdrant account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        112,
+        176
+      ],
+      "id": "bcca2d16-bc9c-43bc-89b9-eb20782c5bdb",
+      "name": "Embeddings Ollama1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "nwuoOlczSLF9IOre",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ `Sen IKEA Türkiye müşteri destek asistanısın.\n\nSORU:\n${$('When chat message received').first().json.chatInput}\n\nKAYNAK BELGELER:\n${$json.documents.map(item => item.document?.pageContent ?? item.pageContent ?? '').join('\\n\\n')}\n\nKURALLAR:\n- Cevabı yalnızca kaynak belgelerden oluştur.\n- Kaynaklarda \"14 gün\" bilgisi varsa ilgili iade koşulunu açıkla.\n- Bilgi yoksa \"Bu konuda elimde doğrulanmış bilgi bulunmuyor.\" de.\n- Türkçe ve kısa cevap ver.` }}",
+        "messages": {
+          "messageValues": []
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        608,
+        -32
+      ],
+      "id": "7b03ce29-fa14-4134-acf8-76da920f229f",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        608,
+        192
+      ],
+      "id": "ab9f3865-31cc-49d7-8089-ac2c0483a5c7",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "gAgitNs8JxI8JXpR",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "documents",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        416,
+        -32
+      ],
+      "id": "46cee43d-49ea-4554-b221-9fd4033c3ca5",
+      "name": "Aggregate"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Qdrant Vector Store1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant Vector Store1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "1738d9e9-8606-46f0-a569-96466d5b1769",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7965c686f50193897c25a024d56f074fd62d90cc48a4887b161a9fca31eb4fd2"
+  },
+  "nodeGroups": [],
+  "id": "hDbluyxsA0tB5pk5",
+  "tags": []
+}

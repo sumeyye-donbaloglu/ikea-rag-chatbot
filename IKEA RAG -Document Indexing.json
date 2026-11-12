@@ -1,0 +1,355 @@
+{
+  "name": "IKEA RAG -Document Indexing",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        -32
+      ],
+      "id": "3dff3cc2-75d4-442c-8d34-6895300e4c9f",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "url": "https://www.ikea.com.tr/internet-magazasi/siparis-degisim-iade?utm_source=chatgpt.com",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        16,
+        -32
+      ],
+      "id": "dba044a1-c3ff-4929-be14-668041b76a4d",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "content",
+              "cssSelector": ".desc"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        -32
+      ],
+      "id": "0b771bbc-61ef-405d-a24d-2d9ab1e8240a",
+      "name": "HTML"
+    },
+    {
+      "parameters": {
+        "url": "https://www.ikea.com.tr/nakliye-hizmeti",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -16,
+        176
+      ],
+      "id": "9fc9479e-ec39-42b5-a326-9b6550730506",
+      "name": "HTTP Request- Nakliye"
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "content",
+              "cssSelector": ".page-content"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        256,
+        176
+      ],
+      "id": "c5d0ea0d-450f-44cb-9ab9-f7f1df7bef40",
+      "name": "HTML- Nakliye"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        480,
+        64
+      ],
+      "id": "11de88cc-19c7-4ae9-a30f-3d92855a238b",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6b92945d-8031-4758-b668-396444da73e1",
+              "name": "text",
+              "value": "={{ $json.content }}",
+              "type": "string"
+            },
+            {
+              "id": "9fc4d868-0f7c-4de7-a87e-199327093432",
+              "name": "source",
+              "value": "={{ $itemIndex === 0 ? 'https://www.ikea.com.tr/internet-magazasi/siparis-degisim-iade' : 'https://www.ikea.com.tr/nakliye-hizmeti' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        704,
+        64
+      ],
+      "id": "bcd1b21c-0605-4793-bc47-6180366b8b51",
+      "name": "Prepare Documents"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "ikea-knowledge",
+          "mode": "list",
+          "cachedResultName": "ikea-knowledge"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        928,
+        64
+      ],
+      "id": "f81bd615-0b50-41ef-8f53-60b4d78a95b8",
+      "name": "Qdrant Vector Store",
+      "credentials": {
+        "qdrantApi": {
+          "id": "rzg1CoKs5e139F5w",
+          "name": "Qdrant account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        848,
+        256
+      ],
+      "id": "6646940d-2833-4db7-ae6b-76a577cfb8df",
+      "name": "Embeddings Ollama",
+      "credentials": {
+        "ollamaApi": {
+          "id": "nwuoOlczSLF9IOre",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $json.text }}",
+        "textSplittingMode": "custom",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "source",
+                "value": "={{ $json.source }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        992,
+        240
+      ],
+      "id": "4168dc11-46c2-44ea-9937-79ae834f7670",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "chunkOverlap": 200,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        992,
+        448
+      ],
+      "id": "25b892c9-dc1e-42ed-82a0-e460b00a9c01",
+      "name": "Recursive Character Text Splitter"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request- Nakliye",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request- Nakliye": {
+      "main": [
+        [
+          {
+            "node": "HTML- Nakliye",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML- Nakliye": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "HTML": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Prepare Documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Documents": {
+      "main": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "0f7c0844-79a6-4711-9977-31b83440bf6e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7965c686f50193897c25a024d56f074fd62d90cc48a4887b161a9fca31eb4fd2"
+  },
+  "nodeGroups": [],
+  "id": "KRJPjNkBQv8HbT6a",
+  "tags": []
+}
