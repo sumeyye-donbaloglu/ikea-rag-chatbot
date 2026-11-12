@@ -2,7 +2,6 @@
 
 IKEA Türkiye'nin resmi web sayfalarındaki bilgilere dayanarak kullanıcı sorularını yanıtlayan, **Retrieval-Augmented Generation (RAG)** mimarisiyle geliştirilmiş bir chatbot projesidir.
 
-Proje, Tech İstanbul Chatbot & Konuşma AI Bootcamp kapsamında geliştirilmiştir.
 
 ## Kullanılan Teknolojiler
 
